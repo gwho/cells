@@ -29,7 +29,7 @@ def get_mind(name):
 
 
 STARTING_ENERGY = 20
-SCATTERED_ENERGY = 10 
+SCATTERED_ENERGY = 10
 
 #Plant energy output. Remember, this should always be less
 #than ATTACK_POWER, because otherwise cells sitting on the plant edge
@@ -50,8 +50,8 @@ ENERGY_CAP   = 2500
 #It is lost forever, not to be confused with the BODY_ENERGY of the new cell.
 SPAWN_LOST_ENERGY = 20
 SUSTAIN_COST      = 0
-MOVE_COST         = 1    
-#MESSAGE_COST    = 0    
+MOVE_COST         = 1
+#MESSAGE_COST    = 0
 
 #BODY_ENERGY + SPAWN_COST is invested to create a new cell. What remains is split evenly.
 #With this model we only need to make sure a cell can't commit suicide by spawning.
@@ -63,12 +63,18 @@ config = ConfigParser.RawConfigParser()
 
 
 def get_next_move(old_x, old_y, x, y):
-    ''' Takes the current position, old_x and old_y, and a desired future position, x and y,
-    and returns the position (x,y) resulting from a unit move toward the future position.'''
+    ''' Takes the current position, old_x and old_y, and a desired future
+    position, x and y, and returns the position (x,y) resulting from a unit
+    move toward the future position.'''
     dx = numpy.sign(x - old_x)
     dy = numpy.sign(y - old_y)
     return (old_x + dx, old_y + dy)
 
+try:
+    import cells_helpers
+    get_next_move = cells_helpers.get_next_move_fast
+except ImportError:
+    pass
 
 class Game(object):
     ''' Represents a game between different minds. '''
@@ -103,8 +109,8 @@ class Game(object):
             self.n_plants = 7
         else:
             self.n_plants = 14
-            
-        # Add some randomly placed plants to the map. 
+
+        # Add some randomly placed plants to the map.
         for x in xrange(self.n_plants):
             mx = random.randrange(1, self.width - 1)
             my = random.randrange(1, self.height - 1)
@@ -188,7 +194,7 @@ class Game(object):
             views_append((a, world_view))
 
         # Create a list containing the action for each agent, where each agent
-        # determines its actions based on its view of the world and messages 
+        # determines its actions based on its view of the world and messages
         # from its team.
         messages = self.messages
         actions = [(a, a.act(v, messages[a.team])) for (a, v) in views]
@@ -205,7 +211,7 @@ class Game(object):
                 act_x, act_y = action.get_data()
                 (new_x, new_y) = get_next_move(agent.x, agent.y,
                                                act_x, act_y)
-                # Move to the new position if it is in range and it's not 
+                # Move to the new position if it is in range and it's not
                 #currently occupied by another agent.
                 if (self.agent_map.in_range(new_x, new_y) and
                     not self.agent_map.get(new_x, new_y)):
@@ -234,9 +240,9 @@ class Game(object):
                 #Dump some energy onto an adjacent field
                 #No Seppuku
                 output = action.get_data()[2]
-                output = min(agent.energy - 1, output) 
+                output = min(agent.energy - 1, output)
                 act_x, act_y = action.get_data()[:2]
-                #Use get_next_move to simplyfy things if you know 
+                #Use get_next_move to simplyfy things if you know
                 #where the energy is supposed to end up.
                 (out_x, out_y) = get_next_move(agent.x, agent.y,
                                                act_x, act_y)
@@ -250,12 +256,12 @@ class Game(object):
                 next_pos = get_next_move(agent.x, agent.y, act_x, act_y)
                 new_x, new_y = next_pos
                 victim = self.agent_map.get(act_x, act_y)
-                terr_delta = (self.terr.get(agent.x, agent.y) 
+                terr_delta = (self.terr.get(agent.x, agent.y)
                             - self.terr.get(act_x, act_y))
                 if (victim is not None and victim.alive and
                     next_pos == act_data):
                     #If both agents attack each other, both loose double energy
-                    #Think twice before attacking 
+                    #Think twice before attacking
                     try:
                         contested = (actions_dict[victim].type == ACT_ATTACK)
                     except:
@@ -263,12 +269,12 @@ class Game(object):
                     agent.attack(victim, terr_delta, contested)
                     if contested:
                         victim.attack(agent, -terr_delta, True)
-                     
+
             elif action.type == ACT_LIFT:
                 if not agent.loaded and self.terr.get(agent.x, agent.y) > 0:
                     agent.loaded = True
                     self.terr.change(agent.x, agent.y, -1)
-                    
+
             elif action.type == ACT_DROP:
                 if agent.loaded:
                     agent.loaded = False
@@ -282,7 +288,7 @@ class Game(object):
                 self.del_agent(agent)
             else :
                 team[agent.team] += 1
-            
+
         # Team wins (and game ends) if opposition team has 0 agents remaining.
         # Draw if time exceeds time limit.
         winner = 0
@@ -293,19 +299,19 @@ class Game(object):
             else:
                 if alive == 0:
                     winner += 1
-        
+
         if alive == 1:
             colors = ["red", "white", "purple", "yellow"]
-            print "Winner is %s (%s) in %s" % (self.mind_list[winner][1].name, 
+            print "Winner is %s (%s) in %s" % (self.mind_list[winner][1].name,
                                                 colors[winner], str(self.time))
             self.winner = winner
-        
+
         if alive == 0 or (self.max_time > 0 and self.time > self.max_time):
             print "It's a draw!"
             self.winner = -1
 
         self.agent_map.unlock()
-        
+
     def tick(self):
         if not self.headless:
             # Space starts new game
@@ -331,7 +337,7 @@ class Game(object):
                              self.plant_map, self.energy_map, self.time,
                              len(self.minds), self.show_energy,
                              self.show_agents)
-            
+
             # test for spacebar pressed - if yes, restart
             for event in pygame.event.get(pygame.locals.KEYUP):
                 if event.key == pygame.locals.K_SPACE:
@@ -371,11 +377,17 @@ class MapLayer(object):
 
     def in_range(self, x, y):
         return (0 <= x < self.width and 0 <= y < self.height)
+try:
+    import types
+    MapLayer.get = types.MethodType(
+        cells_helpers.get_val, None, MapLayer)
+except NameError:
+    raise
 
 
 class ScalarMapLayer(MapLayer):
     def set_random(self, range, symmetric = True):
-        self.values = terrain_generator().create_random(self.size, range, 
+        self.values = terrain_generator().create_random(self.size, range,
                                                         symmetric)
 
     def set_streak(self, range, symmetric = True):
@@ -385,7 +397,7 @@ class ScalarMapLayer(MapLayer):
     def set_simple(self, range, symmetric = True):
         self.values = terrain_generator().create_simple(self.size, range,
                                                         symmetric)
-    
+
     def set_perlin(self, range, symmetric = True):
         self.values = terrain_generator().create_perlin(self.size, range,
                                                         symmetric)
@@ -462,11 +474,10 @@ class ObjectMapLayer(MapLayer):
 # Use Cython version of get_small_view_fast if available.
 # Otherwise, don't bother folks about it.
 try:
-    import cells_helpers
     import types
     ObjectMapLayer.get_small_view_fast = types.MethodType(
         cells_helpers.get_small_view_fast, None, ObjectMapLayer)
-except ImportError:
+except NameError:
     pass
 
 TEAM_COLORS = [(255, 0, 0), (255, 255, 255), (255, 0, 255), (255, 255, 0)]
@@ -572,7 +583,7 @@ class WorldView(object):
 
     def get_terr(self):
         return self.terr_map
-    
+
     def get_energy(self):
         return self.energy_map
 
@@ -614,7 +625,7 @@ class Display(object):
         # Slower version:
         # img = ((numpy.minimum(150, 20 * terr.values) << 16) +
         #       ((numpy.minimum(150, 10 * terr.values + 10.energy_map.values)) << 8))
-         
+
         r = numpy.minimum(150, 20 * terr.values)
         r <<= 16
 
@@ -661,7 +672,7 @@ class Display(object):
 
 class Plant(object):
     color = 0x00FF00
- 
+
     def __init__(self, x, y, eff):
         self.x = x
         self.y = y
@@ -702,7 +713,7 @@ class Message(object):
 
 def main():
     global bounds, symmetric, mind_list
-    
+
     try:
         config.read('default.cfg')
         bounds = config.getint('terrain', 'bounds')

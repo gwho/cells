@@ -29,3 +29,31 @@ def get_small_view_fast(self, int x, int y):
             if a is not None:
                 ret.append(a.get_view())
     return ret
+
+def get_val(self, int x, int y):
+    cdef numpy.ndarray values = self.values
+    cdef int width = self.width
+    cdef int height = self.height
+
+    # is it inbounds?
+    if (x < width and x >= 0) and (y < height and y >= 0):
+        return values[x, y]
+    else:
+        return None
+
+cdef sign(int n):
+    if n < 0:
+        return -1
+    if n == 0:
+        return 0
+    if n > 0:
+        return 1
+
+def get_next_move_fast(int old_x, int old_y, int x, int y):
+    cdef int dx
+    cdef int dy
+
+    dx = sign(x - old_x)
+    dy = sign(y - old_y)
+
+    return (old_x + dx, old_y + dy)
